@@ -1,4 +1,4 @@
-FROM python:3.7
+FROM python:3.10
 ENV PATH_APP /app
 
 RUN apt-get update && \

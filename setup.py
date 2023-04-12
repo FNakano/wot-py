@@ -30,7 +30,7 @@ test_requires = [
     'futures>=3.1.1,<4.0.0; python_version == "2.7"',
     'pyOpenSSL>=18.0.0,<19.0.0',
     'coveralls>=1.0,<2.0',
-    'coverage>=5.0<6.0',
+    'coverage>=5.0,<6.0',
     'cryptography==3.4.8',
     'autopep8>=1.4,<2.0',
     'rope>=0.14.0,<1.0'

@@ -1,27 +1,30 @@
 import machine
 import ujson
 import urequests
+import time
 
-# Assume ML8511 is connected to pin 34
 adc = machine.ADC(machine.Pin(34))
 
 TD = {
     "links": [
-        {"href": "http://192.168.162.111:8080/uv"}
+        {"href": "http://000.000.0.000:0000"}
     ]
 }
 
 while True:
-    uv_value = adc.read()  # Replace with your function to read UV value from ML8511
+    uv_value = adc.read()
     data = {"uv": uv_value}
-    url = TD['links'][0]['href']  # Assuming only one link is specified
+    url = TD['links'][0]['href']
     headers = {'content-type': 'application/json'}
-    
+
     try:
         r = urequests.post(url, data=ujson.dumps(data), headers=headers)
+        if r.status_code >= 200 and r.status_code < 300:
+            print('Successfully sent data to WoT server')
+        else:
+            print('Failed to send data to WoT server: received status code {}'.format(r.status_code))
         r.close()
     except Exception as e:
         print('Could not send data to WoT server: ', e)
 
-    # sleep for some time before sending the next value
-    machine.sleep(1000)  # Sleep for 1 seconds
+    time.sleep(10)

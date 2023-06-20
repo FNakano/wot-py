@@ -8,13 +8,5 @@ def do_connect(ssid, pwd):
         while not sta_if.isconnected():
             pass
     print('network config:', sta_if.ifconfig())
- 
-# This file is executed on every boot (including wake-boot from deepsleep)
-#import esp
-#esp.osdebug(None)
- 
-# Attempt to connect to WiFi network
-do_connect('Zetakron', 'tk02463al27618')
- 
-import webrepl
-webrepl.start()
+
+do_connect('YourSSID', 'YourPassword')

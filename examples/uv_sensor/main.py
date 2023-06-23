@@ -7,7 +7,7 @@ adc = machine.ADC(machine.Pin(34))
 
 TD = {
     "links": [
-        {"href": "http://000.000.0.000:0000"}
+        {"href": "http://000.000.0.00:9494/urn:uvthing/property/uv"}
     ]
 }
 
@@ -18,7 +18,7 @@ while True:
     headers = {'content-type': 'application/json'}
 
     try:
-        r = urequests.post(url, data=ujson.dumps(data), headers=headers)
+        r = urequests.put(url, data=ujson.dumps(data), headers=headers)
         if r.status_code >= 200 and r.status_code < 300:
             print('Successfully sent data to WoT server')
         else:

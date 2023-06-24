@@ -7,79 +7,74 @@ WoT application to expose a Thing that provides UV sensor values.
 
 import json
 import logging
-
 import tornado.gen
 from tornado.ioloop import IOLoop
-
 from wotpy.protocols.http.server import HTTPServer
 from wotpy.wot.servient import Servient
 
+# Constants
 HTTP_PORT = 9494
+ID_THING = "urn:esp32"
+UV_SENSOR = "uv"
 
-GLOBAL_UV_DATA = None
+# Global data storage
+uv_data = None
 
+# Setup logger
 logging.basicConfig()
-LOGGER = logging.getLogger()
-LOGGER.setLevel(logging.INFO)
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
-ID_THING = "urn:uvthing"
-NAME_PROP_UV = "uv"
-
-DESCRIPTION = {
+# Thing description
+description = {
     "id": ID_THING,
     "name": ID_THING,
     "properties": {
-        NAME_PROP_UV: {
+        UV_SENSOR: {
             "type": "number",
             "readOnly": False,
             "observable": True
         }
+        # Add more sensors as needed
     }
 }
 
 @tornado.gen.coroutine
-def uv_read_handler():
+def read_uv():
     """Custom handler for the 'UV' property."""
-
-    LOGGER.info("Reading UV data.")
-    if GLOBAL_UV_DATA is None:
+    logger.info("Reading UV data.")
+    if uv_data is None:
         return
-
-    uv_data_dict = json.loads(GLOBAL_UV_DATA.decode("utf-8"))
-    uv_data = float(uv_data_dict['uv'])
-    raise tornado.gen.Return(uv_data)
+    uv_data_dict = json.loads(uv_data.decode("utf-8"))
+    return float(uv_data_dict['uv'])
 
 @tornado.gen.coroutine
-def uv_write_handler(value):
+def write_uv(value):
     """Custom handler for writing UV data."""
-    global GLOBAL_UV_DATA
-    LOGGER.info("Writing UV data.")
-    GLOBAL_UV_DATA = value
-    LOGGER.info("UV data updated to: {}".format(GLOBAL_UV_DATA))
+    global uv_data
+    logger.info("Writing UV data.")
+    uv_data = value
+    logger.info("UV data updated to: {}".format(uv_data))
+
+# Add handlers for other sensors as needed
 
 @tornado.gen.coroutine
-def main():
-    LOGGER.info("Creating HTTP server on: {}".format(HTTP_PORT))
-
+def start_server():
+    logger.info("Creating HTTP server on: {}".format(HTTP_PORT))
     http_server = HTTPServer(port=HTTP_PORT)
-
-    LOGGER.info("Creating servient")
-
+    logger.info("Creating servient")
     servient = Servient()
     servient.add_server(http_server)
-
-    LOGGER.info("Starting servient")
-
+    logger.info("Starting servient")
     wot = yield servient.start()
-
-    LOGGER.info("Exposing and configuring Thing")
-
-    exposed_thing = wot.produce(json.dumps(DESCRIPTION))
-    exposed_thing.set_property_read_handler(NAME_PROP_UV, uv_read_handler)
-    exposed_thing.set_property_write_handler(NAME_PROP_UV, uv_write_handler)
+    logger.info("Exposing and configuring Thing")
+    exposed_thing = wot.produce(json.dumps(description))
+    exposed_thing.set_property_read_handler(UV_SENSOR, read_uv)
+    exposed_thing.set_property_write_handler(UV_SENSOR, write_uv)
+    # Add handlers for other sensors as needed
     exposed_thing.expose()
 
 if __name__ == "__main__":
-    LOGGER.info("Starting loop")
-    IOLoop.current().add_callback(main)
+    logger.info("Starting loop")
+    IOLoop.current().add_callback(start_server)
     IOLoop.current().start()

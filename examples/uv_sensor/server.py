@@ -45,7 +45,17 @@ def uv_read_handler():
     if GLOBAL_UV_DATA is None:
         return
 
-    raise tornado.gen.Return(GLOBAL_UV_DATA)
+    uv_data_dict = json.loads(GLOBAL_UV_DATA.decode("utf-8"))
+    uv_data = float(uv_data_dict['uv'])
+    raise tornado.gen.Return(uv_data)
+
+@tornado.gen.coroutine
+def uv_write_handler(value):
+    """Custom handler for writing UV data."""
+    global GLOBAL_UV_DATA
+    LOGGER.info("Writing UV data.")
+    GLOBAL_UV_DATA = value
+    LOGGER.info("UV data updated to: {}".format(GLOBAL_UV_DATA))
 
 @tornado.gen.coroutine
 def main():
@@ -66,8 +76,8 @@ def main():
 
     exposed_thing = wot.produce(json.dumps(DESCRIPTION))
     exposed_thing.set_property_read_handler(NAME_PROP_UV, uv_read_handler)
+    exposed_thing.set_property_write_handler(NAME_PROP_UV, uv_write_handler)
     exposed_thing.expose()
-
 
 if __name__ == "__main__":
     LOGGER.info("Starting loop")

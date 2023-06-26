@@ -36,7 +36,7 @@ uv_data = None
 ```
 This variable will store the latest UV sensor data received from the ESP32.
 
-- Setting up logging:
+- Setting up [logging](https://docs.python.org/3/library/logging.html):
 ```py
 logging.basicConfig()
 logger = logging.getLogger()
@@ -44,7 +44,7 @@ logger.setLevel(logging.INFO)
 ```
 Configuring the logger to display log messages with the level set to INFO.
 
-- Thing description:
+- [Thing Description](https://www.w3.org/TR/wot-thing-description/):
 ```py
 description = {
     "id": ID_THING,
@@ -64,7 +64,6 @@ This dictionary represents the Thing description. It specifies the Thing's ID, n
 ```py
 @tornado.gen.coroutine
 def read_uv():
-    """Custom handler for the 'UV' property."""
     if uv_data is None:
         return
     uv_data_dict = json.loads(uv_data.decode("utf-8"))
@@ -72,11 +71,16 @@ def read_uv():
 
 @tornado.gen.coroutine
 def write_uv(value):
-    """Custom handler for writing UV data."""
     global uv_data
     uv_data = value
 ```
 These two functions serve as custom handlers for reading and writing the UV sensor data. The read_uv function parses the stored UV data and returns it as a float. The write_uv function updates the uv_data variable with the received value.
+
+`tornado.gen.coroutine`: This decorator is used to define a coroutine function in Tornado. It allows the function to be used with asynchronous programming. You can refer to the [Tornado documentation](https://www.tornadoweb.org/en/stable/gen.html) for more details.
+
+`json.loads`: This method is used to parse a JSON string into a Python object. It is part of the Python JSON module. You can refer to the [Python JSON documentation](https://docs.python.org/3/library/json.html) for more details.
+
+`uv_data.decode`: This method is used to decode a byte string into a Unicode string. It is a method of the bytes class in Python. You can refer to the [Python bytes documentation](https://docs.python.org/3/library/stdtypes.html#bytes.decode) for more details.
 
 - Starting the server:
 ```py
@@ -95,7 +99,21 @@ if __name__ == "__main__":
     IOLoop.current().add_callback(start_server)
     IOLoop.current().start()
 ```
-The start_server function creates an HTTP server using the specified port and initializes the WotPy Servient. It then starts the servient, produces the Thing based on the description, sets the custom read and write handlers for the UV property, and exposes the Thing. Finally, the server is started by adding the start_server function to the IOLoop.
+The start_server function creates an [HTTP server](https://agmangas.github.io/wot-py/http.html) using the specified port and initializes the [WotPy Servient](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.servient.html?highlight=servient#module-wotpy.wot.servient). It then starts the servient, produces the Thing based on the description, sets the custom read and write handlers for the UV property, and exposes the Thing. Finally, the server is started by adding the start_server function to the IOLoop.
+
+`servient.add_server`: This method is used to add a server to the Servient instance. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.servient.html?highlight=servient%20add_server#wotpy.wot.servient.Servient.add_server) for more details.
+
+`servient.start`: This method is used to start the Servient instance. It returns a future that resolves to a Wot object. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.servient.html?highlight=servient%20start#wotpy.wot.servient.Servient.start) for more details.
+
+`wot.produce`: This method is used to produce a Thing instance from a Thing description. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.wot.html?highlight=wot%20produce#wotpy.wot.wot.WoT.produce) for more details.
+
+`json.dumps`: This method is used to serialize a Python object into a JSON-formatted string. It is part of the Python JSON module. You can refer to the [Python JSON documentation](https://docs.python.org/3/library/json.html) for more details.
+
+`exposed_thing.set_property_read_handler`: This method is used to set a custom read handler for a property of a Thing. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=set_property_write_handler#wotpy.wot.exposed.thing.ExposedThing.set_property_write_handler) for more details.
+
+`exposed_thing.set_property_write_handler`: This method is used to set a custom write handler for a property of a Thing. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=set_property_write_handler#wotpy.wot.exposed.thing.ExposedThing.set_property_read_handler) for more details.
+
+`exposed_thing.expose`: This method is used to expose a Thing. It makes the Thing available for interaction through the WoT interfaces. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=expose#wotpy.wot.exposed.thing.ExposedThing.expose) for more details.
 
 ## main.py
 
@@ -116,10 +134,14 @@ sensors = {
 ```
 This dictionary contains the sensor configurations. In this case, it defines an uv_sensor with its type as 'uv' and specifies the corresponding pin on the ESP32.
 
+`machine.ADC`: This class is part of the MicroPython machine module and is used to configure and read values from an Analog-to-Digital Converter (ADC) channel. You can refer to the [MicroPython machine.ADC documentation](https://docs.micropython.org/en/latest/library/machine.ADC.html) for more details.
+
+`machine.Pin`: This class is part of the MicroPython machine module and is used to configure and control GPIO pins. You can refer to the [MicroPython machine.Pin documentation](https://docs.micropython.org/en/latest/library/machine.Pin.html) for more details.
+
 - Thing description:
 ```py
 TD = {
-    'uv_sensor': {"links": [{"href": "http://192.168.0.39:9494/urn:esp32/property/uv"}]},
+    'uv_sensor': {"links": [{"href": "http://000.000.0.00:9494/urn:esp32/property/uv"}]},
     # Add sensors as needed
 }
 ```
@@ -141,6 +163,10 @@ def send_sensor_data(sensor_id, sensor_type, url, data):
 ```
 This function takes the sensor ID, type, URL, and data as input. It sends an HTTP PUT request to the server with the data payload in JSON format. It then prints a success or failure message based on the response status code.
 
+`ujson.dumps`: This function is provided by the MicroPython ujson module and is used to serialize a Python object into a JSON-formatted string. You can refer to the [MicroPython ujson documentation](https://docs.micropython.org/en/latest/library/json.html) for more details.
+
+`urequests.put`: This function is provided by the MicroPython urequests module and is used to send an HTTP PUT request. It is similar to the requests library in Python. You can refer to the [MicroPython urequests documentation](https://makeblock-micropython-api.readthedocs.io/en/latest/public_library/Third-party-libraries/urequests.html) for more details.
+
 - Main function:
 ```
 def main():
@@ -157,6 +183,8 @@ if __name__ == "__main__":
 ```
 
 The main function is executed when the script is run. It enters an infinite loop and iterates through each sensor defined in the sensors dictionary. It reads the sensor value, creates a data object with the corresponding type, retrieves the URL from the Thing Description (TD), and calls the send_sensor_data function to send the data to the server. The loop waits for 5 seconds before repeating.
+
+`time.sleep`: This function is part of the Python time module and is used to pause the execution of the program for a specified number of seconds. You can refer to the [Python time documentation](https://docs.python.org/3/library/time.html#time.sleep) for more details.
 
 ## boot.py
 

@@ -1,16 +1,53 @@
 # UV Sensor Data Transmission with ESP32 and WoT
 
-This project aims to demonstrate the transmission of UV sensor data from an ESP32 microcontroller to a Web of Things (WoT) server using the HTTP protocol. The project utilizes the WotPy library for creating the server and handling WoT interactions, as well as the ESP32 microcontroller with the ML8511 UV sensor.
+This project demonstrates transmitting UV sensor data from an ESP32 microcontroller to a Web of Things (WoT) server via the HTTP protocol. The project utilizes the WotPy library for server creation and WoT interactions and the ESP32 microcontroller paired with an ML8511 UV sensor.
 
-The code consists of two main files: server.py and main.py. The server.py file sets up the WoT server, exposes a Thing representing the UV sensor, and defines custom handlers for reading and writing the UV sensor data. On the other hand, the main.py file runs on the ESP32 and reads the UV sensor data periodically, sending it to the WoT server using HTTP requests.
+Two main code files comprise this project: server.py and main.py. The server.py sets up the WoT server, exposes a Thing representing the UV sensor, and defines custom handlers for reading and writing UV sensor data. The main.py, running on the ESP32, periodically reads UV sensor data and sends it to the WoT server using HTTP requests.
 
-To use this project, you need to run the server.py file on your Python server and load the main.py file onto your ESP32. The ESP32 will continuously read the UV sensor data and send it to the server, where it can be accessed and observed through the exposed Thing.
+To utilize this project, run the server.py file on your Python server and load the main.py file onto your ESP32. The ESP32 will continuously read UV sensor data and transmit it to the server, where it can be accessed and observed through the exposed Thing.
 
-This project serves as a basic example of integrating IoT devices with WoT principles, enabling seamless communication and interoperability between devices and applications in a decentralized IoT ecosystem.
+This project serves as a foundational example of integrating IoT devices with WoT principles, facilitating seamless communication and interoperability between devices and applications within a decentralized IoT ecosystem.
 
 Feel free to customize and expand upon this project to suit your specific requirements and sensor configurations.
 
-## server.py
+## Environment Setup
+
+### WoT Server
+
+This document assumes you have docker installed on your machine. If not, please visit the [official website](https://docs.docker.com/get-docker/) to install it.
+
+First, execute the following commands in your terminal:
+```sh
+git clone https://github.com/T16K/wot-py.git
+cd wot-py
+docker build .
+```
+
+Now you've built an image from the Dockerfile. Next, check the IMAGE ID:
+```sh
+docker images
+```
+
+Copy the characters in the IMAGE ID column and replace 'IMAGE_ID' in the following command:
+```sh
+docker container run --network host -it --rm -v $PWD:/asdf 'IMAGE_ID' sh
+```
+
+We are now running a Docker container using the specified image with the host network stack, which provides interactive access to a shell session, and mounting the current working directory to the /asdf directory inside the container.
+
+Finally, access the server.py file, and we have the server running:
+```sh
+cd examples/uv_sensor
+python server.py
+```
+
+### ESP32
+
+For detailed information, see this [document](https://t16k-ach2157.readthedocs.io/en/latest/comp/esp.html) in Portuguese.
+
+## File Explanations
+
+### server.py
 
 - Importing the necessary libraries and modules:
 ```py
@@ -115,7 +152,7 @@ The start_server function creates an [HTTP server](https://agmangas.github.io/wo
 
 `exposed_thing.expose`: This method is used to expose a Thing. It makes the Thing available for interaction through the WoT interfaces. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=expose#wotpy.wot.exposed.thing.ExposedThing.expose) for more details.
 
-## main.py
+### main.py
 
 - Importing the necessary modules:
 ```py
@@ -138,7 +175,7 @@ This dictionary contains the sensor configurations. In this case, it defines an 
 
 `machine.Pin`: This class is part of the MicroPython machine module and is used to configure and control GPIO pins. You can refer to the [MicroPython machine.Pin documentation](https://docs.micropython.org/en/latest/library/machine.Pin.html) for more details.
 
-- Thing description:
+- Thing Description:
 ```py
 TD = {
     'uv_sensor': {"links": [{"href": "http://000.000.0.00:9494/urn:esp32/property/uv"}]},
@@ -186,9 +223,9 @@ The main function is executed when the script is run. It enters an infinite loop
 
 `time.sleep`: This function is part of the Python time module and is used to pause the execution of the program for a specified number of seconds. You can refer to the [Python time documentation](https://docs.python.org/3/library/time.html#time.sleep) for more details.
 
-## boot.py
+### boot.py
 
-The boot.py file is a script that runs automatically when the ESP32 starts up. Its purpose is to establish a Wi-Fi connection to the specified network, allowing the ESP32 to connect to the internet and communicate with the WoT server.
+The boot.py file is a script that runs automatically when the ESP32 starts up. Its purpose is to [establish a Wi-Fi connection](https://docs.micropython.org/en/latest/esp32/quickref.html#networking) to the specified network, allowing the ESP32 to connect to the internet and communicate with the WoT server.
 
 The code defines a function called `do_connect` that takes the SSID (network name) and password as arguments. Within the function, it imports the network module to manage the Wi-Fi connection.
 

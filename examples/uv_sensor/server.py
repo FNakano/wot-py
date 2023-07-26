@@ -11,6 +11,8 @@ import tornado.gen
 from tornado.ioloop import IOLoop
 from wotpy.protocols.http.server import HTTPServer
 from wotpy.wot.servient import Servient
+from rdflib import Graph, Namespace, Literal
+from rdflib.namespace import RDF, RDFS
 
 # Constants
 HTTP_PORT = 9494
@@ -24,6 +26,17 @@ uv_data = None
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# RDF setup
+g = Graph()
+n = Namespace("http://wotpyrdfsetup.org/device/")
+Device = n.Device
+UVSensor = n.UVSensor
+hasReading = n.hasReading
+sensor1 = n.sensor1
+
+# Create the class hierarchy
+g.add((UVSensor, RDFS.subClassOf, Device))
 
 # Thing description
 description = {
@@ -52,9 +65,18 @@ def read_uv():
 def write_uv(value):
     """Custom handler for writing UV data."""
     global uv_data
+    global g
     logger.info("Writing UV data.")
     uv_data = value
     logger.info("UV data updated to: {}".format(uv_data))
+
+    # Update the graph
+    g.remove((sensor1, hasReading, None))  # remove old reading
+    uv_data_dict = json.loads(uv_data.decode("utf-8"))
+    g.add((sensor1, RDF.type, UVSensor))
+    g.add((sensor1, hasReading, Literal(uv_data_dict['uv'])))
+
+    print(g.serialize(format="turtle"))  # print the graph for debugging
 
 # Add handlers for other sensors as needed
 

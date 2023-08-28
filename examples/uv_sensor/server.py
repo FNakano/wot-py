@@ -38,7 +38,6 @@ UVValue = ex.UVValue  # Observed value
 
 g.add((UVSensor, RDF.type, ssn.System))
 g.add((UVObservation, RDFS.subClassOf, Observation))
-g.add((UVValue, RDFS.datatype, XSD.float))
 
 description = {
     "id": ID_THING,

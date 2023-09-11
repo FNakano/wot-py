@@ -4,6 +4,7 @@
 import json
 import logging
 import tornado.gen
+import tornado.web
 from tornado.ioloop import IOLoop
 from wotpy.protocols.http.server import HTTPServer
 from wotpy.wot.servient import Servient
@@ -22,7 +23,6 @@ logger.setLevel(logging.INFO)
 
 g = Graph()
 
-# SSN ontology definitions
 ssn = Namespace("http://www.w3.org/ns/ssn/")
 sosa = Namespace("http://www.w3.org/ns/sosa/")
 ex = Namespace("http://wotpyrdfsetup.org/device/")
@@ -32,9 +32,9 @@ ResultTime = sosa.resultTime
 HasResult = sosa.hasResult
 Observes = sosa.observes
 
-UVSensor = ex.UVSensor  # A specific sensor instance
-UVObservation = ex.UVObservation  # An observation class
-UVValue = ex.UVValue  # Observed value
+UVSensor = ex.UVSensor
+UVObservation = ex.UVObservation
+UVValue = ex.UVValue
 
 g.add((UVSensor, RDF.type, ssn.System))
 g.add((UVObservation, RDFS.subClassOf, Observation))
@@ -50,6 +50,31 @@ description = {
         }
     }
 }
+
+class SPARQLHandler(tornado.web.RequestHandler):
+    def post(self):
+        sparql_query = self.request.body.decode()
+        results = g.query(sparql_query)
+        self.write(results.serialize(format="json"))
+
+class CustomHTTPServer(HTTPServer):
+
+    def __init__(self, *args, **kwargs):
+        super(CustomHTTPServer, self).__init__(*args, **kwargs)
+        self._add_sparql_endpoint()
+
+    def _add_sparql_endpoint(self):
+        sparql_endpoint = "/sparql"
+        
+        def sparql_query_func(query):
+            global g
+            res = g.query(query)
+            json_results = JSONResultSerializer(res)
+            return json_results.serialize(format='json')
+
+        self._app.add_handlers(r".*$", [
+            (sparql_endpoint, SPARQLHandler, {"query_func": sparql_query_func})
+        ])
 
 @tornado.gen.coroutine
 def read_uv():
@@ -79,9 +104,8 @@ def write_uv(value):
 
 @tornado.gen.coroutine
 def start_server():
-    logger.info("Creating HTTP server on: {}".format(HTTP_PORT))
-    http_server = HTTPServer(port=HTTP_PORT)
-    logger.info("Creating servient")
+    logger.info("Creating custom HTTP server on: {}".format(HTTP_PORT))
+    http_server = CustomHTTPServer(port=HTTP_PORT)
     servient = Servient()
     servient.add_server(http_server)
     logger.info("Starting servient")

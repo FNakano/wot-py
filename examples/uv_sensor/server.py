@@ -3,7 +3,6 @@
 
 import json
 import logging
-import tornado.gen
 import tornado.web
 from tornado.ioloop import IOLoop
 from wotpy.protocols.http.server import HTTPServer
@@ -12,6 +11,7 @@ from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import RDF, RDFS, XSD
 
 HTTP_PORT = 9494
+SPARQL_PORT = 8585
 ID_THING = "urn:esp32"
 UV_SENSOR = "uv"
 
@@ -57,28 +57,20 @@ class SPARQLHandler(tornado.web.RequestHandler):
         results = g.query(sparql_query)
         self.write(results.serialize(format="json"))
 
-class CustomHTTPServer(HTTPServer):
+class SPARQLServer(tornado.web.Application):
+    def __init__(self):
+        handlers = [
+            ("/sparql", SPARQLHandler)
+        ]
+        super(SPARQLServer, self).__init__(handlers)
 
+class CustomHTTPServer(HTTPServer):
     def __init__(self, *args, **kwargs):
         super(CustomHTTPServer, self).__init__(*args, **kwargs)
-        self._add_sparql_endpoint()
-
-    def _add_sparql_endpoint(self):
-        sparql_endpoint = "/sparql"
-        
-        def sparql_query_func(query):
-            global g
-            res = g.query(query)
-            json_results = JSONResultSerializer(res)
-            return json_results.serialize(format='json')
-
-        self._app.add_handlers(r".*$", [
-            (sparql_endpoint, SPARQLHandler, {"query_func": sparql_query_func})
-        ])
 
 @tornado.gen.coroutine
 def read_uv():
-    logger.info("Reading UV data.")
+    logger.info("Lendo dados UV.")
     if uv_data is None:
         return
     uv_data_dict = json.loads(uv_data.decode("utf-8"))
@@ -88,9 +80,9 @@ def read_uv():
 def write_uv(value):
     global uv_data
     global g
-    logger.info("Writing UV data.")
+    logger.info("Gravando dados UV.")
     uv_data = value
-    logger.info("UV data updated to: {}".format(uv_data))
+    logger.info("Dados UV atualizados para: {}".format(uv_data))
 
     uv_data_dict = json.loads(uv_data.decode("utf-8"))
 
@@ -104,19 +96,25 @@ def write_uv(value):
 
 @tornado.gen.coroutine
 def start_server():
-    logger.info("Creating custom HTTP server on: {}".format(HTTP_PORT))
+    logger.info("Criando servidor HTTP customizado na porta: {}".format(HTTP_PORT))
     http_server = CustomHTTPServer(port=HTTP_PORT)
     servient = Servient()
     servient.add_server(http_server)
-    logger.info("Starting servient")
+    logger.info("Iniciando servient")
     wot = yield servient.start()
-    logger.info("Exposing and configuring Thing")
+    logger.info("Expondo e configurando Thing")
     exposed_thing = wot.produce(json.dumps(description))
     exposed_thing.set_property_read_handler(UV_SENSOR, read_uv)
     exposed_thing.set_property_write_handler(UV_SENSOR, write_uv)
     exposed_thing.expose()
 
+def start_sparql_server():
+    logger.info(f"Iniciando servidor SPARQL na porta: {SPARQL_PORT}")
+    sparql_app = SPARQLServer()
+    sparql_app.listen(SPARQL_PORT)
+
 if __name__ == "__main__":
-    logger.info("Starting loop")
+    logger.info("Iniciando loop")
     IOLoop.current().add_callback(start_server)
+    IOLoop.current().add_callback(start_sparql_server)
     IOLoop.current().start()

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPARQL Query Interface</title>
+</head>
+<body>
+    <h1>Execute SPARQL Query</h1>
+    <form method="post" action="/query">
+        <label for="sparql_query">SPARQL Query:</label><br>
+        <textarea name="sparql_query" id="sparql_query" rows="4" cols="50"></textarea><br>
+        <input type="submit" value="Execute Query">
+    </form>
+    
+    {% if results %}
+    <h2>Results:</h2>
+    <pre>{{ results }}</pre>
+    {% end %}
+</body>
+</html>

@@ -5,6 +5,7 @@ import json
 import logging
 import tornado.web
 from tornado.ioloop import IOLoop
+from tornado.web import RequestHandler, Application, url
 from wotpy.protocols.http.server import HTTPServer
 from wotpy.wot.servient import Servient
 from rdflib import Graph, Namespace, Literal
@@ -57,10 +58,20 @@ class SPARQLHandler(tornado.web.RequestHandler):
         results = g.query(sparql_query)
         self.write(results.serialize(format="json"))
 
-class SPARQLServer(tornado.web.Application):
+class SparqlQueryHandler(RequestHandler):
+    def get(self):
+        self.render("sparql_query.html", results=None)
+
+    def post(self):
+        sparql_query = self.get_body_argument("sparql_query")
+        results = g.query(sparql_query)
+        self.render("sparql_query.html", results=results.serialize(format="json"))
+
+class SPARQLServer(Application):
     def __init__(self):
         handlers = [
-            ("/sparql", SPARQLHandler)
+            ("/sparql", SPARQLHandler),
+            ("/query", SparqlQueryHandler)
         ]
         super(SPARQLServer, self).__init__(handlers)
 

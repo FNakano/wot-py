@@ -1,3 +1,7 @@
+**note**: This fork aims to *use* WoTPy to implement a servient, a knowledge graph persitence mechanism and a SPARQL endpoint. These features are developed and tested in the uv_sensor example [here](examples/uv_sensor)
+
+Here follow the original WoTPy README: 
+
 > :warning: Please note that this project is currently behind the current version of the W3C WoT specifications although **efforts are currently being made in order to bring this project back to date**.  
 This actualization is still in the very early stages of development, so you may encounter bugs. Documentation may also be incomplete. Keep this in mind if you are planning on using this implementation on ongoing projects.
 

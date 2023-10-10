@@ -28,6 +28,7 @@ Now you've built an image from the Dockerfile. Next, check the IMAGE ID:
 docker images
 ```
 
+<!--- current image id for FN: 139996ce06b6 --->
 Copy the characters in the IMAGE ID column and replace 'IMAGE_ID' in the following command:
 ```sh
 docker container run --network host -it --rm -v $PWD:/asdf 'IMAGE_ID' sh
@@ -240,3 +241,25 @@ To use this script, replace 'YourSSID' with the SSID of your Wi-Fi network and '
 By including this boot.py script on your ESP32, it will automatically connect to the specified Wi-Fi network upon startup, ensuring a reliable internet connection for your application.
 
 Remember to upload the modified boot.py file to the ESP32 and verify that the network credentials are correct before deploying your project.
+
+## Example (HTTP side)
+
+Both ESP32-based device and web browser communicate to WotPy servient through port 9494.
+
+Notice that ESP32-based device only sends information. It makes PUT requests to the servient (the request type is defined in WoT recommendation and implemented into WotPy). Also, the browser only receives information. It makes GET requests to the server (browse http://localhost:9494/urn:esp32/property/uv).
+
+Figure 1: O dispositivo (ESP32) executa um loop que, a cada 5 segundos executa a função send\_sensor\_data. Esta função envia uma requisição PUT para o servidor (WoTPy). Em resposta a essa requisição o servidor executa o handler (função) write\_uv que contém o envio da resposta. Um usuário pode acessar a informação no servidor através do Browser. Entrar a URL na barra de endereços do Browser o faz enviar ao servidor uma requisição GET. Em resposta à requisição o servidor executa o handler (função) read\_uv, que contém o envio da resposta - no caso, o valor de uv mais recente. O Browser recebe essa informação e renderiza a página contendo a informação.
+
+![Figure1](sequencia.png)
+
+One can send data (simulate am ESP32-based device sending data) with cURL command: `curl -X PUT -H "Content-Type: application/json" -d '{"uv":"31"}' http://localhost:9494/urn:esp32/property/uv`
+
+
+## Example (SPARQL side)
+
+Link to SPARQL query page: http://localhost:8585/query
+
+Link to SPARQL service:
+
+A SPARQL query: `SELECT * WHERE {?S ?P ?O}`
+

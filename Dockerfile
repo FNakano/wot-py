@@ -2,7 +2,7 @@ FROM python:3.7
 ENV PATH_APP /app
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y tshark && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tshark vim && \
     groupadd wireshark && \
     usermod -aG wireshark root && \
     setcap 'CAP_NET_RAW+eip CAP_NET_ADMIN+eip' /usr/bin/dumpcap && \

@@ -4,19 +4,18 @@
 import json
 import logging
 import tornado.web
-import sqlite3
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, Application, url
+from tornado.web import RequestHandler, Application
 from wotpy.protocols.http.server import HTTPServer
 from wotpy.wot.servient import Servient
 from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import RDF, RDFS, XSD
+from rdflib.plugins.stores import berkeleydb
 
 HTTP_PORT = 9494
 SPARQL_PORT = 8585
 ID_THING = "urn:esp32"
 UV_SENSOR = "uv"
-DATABASE_NAME = 'observations.db'
 
 uv_data = None
 
@@ -24,7 +23,10 @@ logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-g = Graph()
+config = "berkeley_db"
+store = berkeleydb.BerkeleyDB(configuration=config)
+g = Graph(store=store, identifier=ID_THING)
+g.open(config, create=True)
 
 ssn = Namespace("http://www.w3.org/ns/ssn/")
 sosa = Namespace("http://www.w3.org/ns/sosa/")
@@ -54,34 +56,8 @@ description = {
     }
 }
 
-def init_db():
-    """ Initialize SQLite database and table """
-    with sqlite3.connect(DATABASE_NAME) as conn:
-        c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS uv_observations
-                     (id INTEGER PRIMARY KEY, uv_value REAL)''')
-        conn.commit()
-
-def add_to_db(value):
-    """ Add UV observation to SQLite """
-    with sqlite3.connect(DATABASE_NAME) as conn:
-        c = conn.cursor()
-        c.execute("INSERT INTO uv_observations (uv_value) VALUES (?)", (value,))
-        conn.commit()
-
-def load_data_to_graph():
-    """ Load UV observations from SQLite to RDF graph """
-    conn = sqlite3.connect(DATABASE_NAME)
-    c = conn.cursor()
-    for row in c.execute("SELECT id, uv_value FROM uv_observations"):
-        obs_id, uv_val = row
-        observation_uri = ex["Observation{}".format(obs_id)]
-        g.add((observation_uri, HasResult, Literal(uv_val, datatype=UVValue)))
-    conn.close()
-
 class SPARQLHandler(tornado.web.RequestHandler):
     def post(self):
-        load_data_to_graph()
         sparql_query = self.request.body.decode()
         results = g.query(sparql_query)
         self.write(results.serialize(format="json"))
@@ -110,30 +86,27 @@ class CustomHTTPServer(HTTPServer):
 @tornado.gen.coroutine
 def read_uv():
     logger.info("Lendo dados UV.")
-    if uv_data is None:
-        return
-    uv_data_dict = json.loads(uv_data.decode("utf-8"))
-    return float(uv_data_dict['uv'])
+    uv_data_bytes = uv_data
+    if uv_data_bytes:
+        uv_data_dict = json.loads(uv_data_bytes.decode("utf-8"))
+        return float(uv_data_dict['uv'])
 
 @tornado.gen.coroutine
 def write_uv(value):
     global uv_data
     global g
-    try:
-        logger.info("Gravando dados UV.")
-        uv_data = value
-        uv_data_dict = json.loads(uv_data.decode("utf-8"))
-        uv_val = float(uv_data_dict['uv'])
-        obs_id = add_to_db(uv_val)
+    logger.info("Gravando dados UV.")
+    uv_data = value
 
-        observation_uri = ex["Observation{}".format(obs_id)]
-        g.remove((UVSensor, Observes, None))
-        g.add((UVSensor, Observes, UVObservation))
-        g.add((observation_uri, HasResult, Literal(uv_val, datatype=UVValue)))
+    uv_data_dict = json.loads(uv_data.decode("utf-8"))
 
-        print(g.serialize(format="turtle"))
-    except Exception as e:
-        logger.error(f"Erro ao gravar UV: {e}")
+    observation_uri = ex["Observation{}".format(uv_data_dict['uv'])]
+
+    g.remove((UVSensor, Observes, None))
+    g.add((UVSensor, Observes, UVObservation))
+    g.add((observation_uri, HasResult, Literal(uv_data_dict['uv'], datatype=UVValue)))
+
+    print(g.serialize(format="turtle"))
 
 @tornado.gen.coroutine
 def start_server():
@@ -154,9 +127,17 @@ def start_sparql_server():
     sparql_app = SPARQLServer()
     sparql_app.listen(SPARQL_PORT)
 
+def close_graph():
+    if store is not None:
+        store.close(commit_pending_transaction=True)
+    if g is not None:
+        g.close()
+
 if __name__ == "__main__":
-    init_db()
-    logger.info("Iniciando loop")
-    IOLoop.current().add_callback(start_server)
-    IOLoop.current().add_callback(start_sparql_server)
-    IOLoop.current().start()
+    try:
+        logger.info("Iniciando loop")
+        IOLoop.current().add_callback(start_server)
+        IOLoop.current().add_callback(start_sparql_server)
+        IOLoop.current().start()
+    finally:
+        close_graph()

@@ -11,6 +11,7 @@ from wotpy.wot.servient import Servient
 from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import RDF, RDFS, XSD
 from rdflib.plugins.stores import berkeleydb
+from datetime import datetime
 
 HTTP_PORT = 9494
 SPARQL_PORT = 8585
@@ -100,11 +101,13 @@ def write_uv(value):
 
     uv_data_dict = json.loads(uv_data.decode("utf-8"))
 
-    observation_uri = ex["Observation{}".format(uv_data_dict['uv'])]
+    observation_id = "Observation" + datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    observation_uri = ex[observation_id]
 
-    g.remove((UVSensor, Observes, None))
     g.add((UVSensor, Observes, UVObservation))
+    g.add((observation_uri, RDF.type, Observation))
     g.add((observation_uri, HasResult, Literal(uv_data_dict['uv'], datatype=UVValue)))
+    g.add((observation_uri, ResultTime, Literal(datetime.utcnow(), datatype=XSD.dateTime)))
 
     print(g.serialize(format="turtle"))
 

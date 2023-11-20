@@ -16,3 +16,6 @@ RUN pip install -U .
 WORKDIR ${PATH_APP}/examples/uv_sensor
 RUN pip install -r requirements.txt
 WORKDIR ${PATH_APP}
+
+RUN useradd -m myuser
+USER myuser

@@ -31,7 +31,7 @@ docker images
 <!--- current image id for FN: 139996ce06b6 --->
 Copy the characters in the IMAGE ID column and replace 'IMAGE_ID' in the following command:
 ```sh
-docker container run --network host -it --rm -v $PWD:/asdf 'IMAGE_ID' sh
+docker container run --network host -it --rm --user t1k -v $PWD/examples/uv_sensor:/app 'IMAGE_ID' sh
 ```
 
 We are now running a Docker container using the specified image with the host network stack, which provides interactive access to a shell session, and mounting the current working directory to the /asdf directory inside the container.

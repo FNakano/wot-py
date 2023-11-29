@@ -107,7 +107,7 @@ def write_uv(value):
     g.add((UVSensor, Observes, UVObservation))
     g.add((observation_uri, RDF.type, Observation))
     g.add((observation_uri, HasResult, Literal(uv_data_dict['uv'], datatype=UVValue)))
-    g.add((observation_uri, ResultTime, Literal(datetime.utcnow(), datatype=XSD.dateTime)))
+    g.add((observation_uri, ResultTime, Literal(datetime.utcnow().isoformat(), datatype=XSD.dateTime)))
 
     print(g.serialize(format="turtle"))
 

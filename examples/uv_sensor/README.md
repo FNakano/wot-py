@@ -1,6 +1,6 @@
-# UV Sensor Data Transmission with ESP32 and WoT
+# UV Sensor Data Transmission with ESP32 and WoT with RDF Integration
 
-This project demonstrates transmitting UV sensor data from an ESP32 microcontroller to a Web of Things (WoT) server via the HTTP protocol. The project utilizes the WotPy library for server creation and WoT interactions and the ESP32 microcontroller paired with an ML8511 UV sensor.
+This project demonstrates transmitting UV sensor data from an ESP32 microcontroller to a Web of Things (WoT) server via the HTTP protocol, with added functionality of RDF graph integration and SPARQL endpoint for advanced data querying. The project utilizes the WotPy library for server creation and WoT interactions, the ESP32 microcontroller paired with an ML8511 UV sensor, and RDFLib with BerkeleyDB for managing RDF graphs.
 
 Two main code files comprise this project: server.py and main.py. The server.py sets up the WoT server, exposes a Thing representing the UV sensor, and defines custom handlers for reading and writing UV sensor data. The main.py, running on the ESP32, periodically reads UV sensor data and sends it to the WoT server using HTTP requests.
 
@@ -9,6 +9,12 @@ To utilize this project, run the server.py file on your Python server and load t
 This project serves as a foundational example of integrating IoT devices with WoT principles, facilitating seamless communication and interoperability between devices and applications within a decentralized IoT ecosystem.
 
 Feel free to customize and expand upon this project to suit your specific requirements and sensor configurations.
+
+## Key Components
+
+- **WoTPy Server with RDF Graph Integration:** The 'server.py' sets up the WoT server and integrates RDF graphs using RDFLib and BerkeleyDB for storing data.
+- **SPARQL Endpoint for Advanced Data Querying:** Implementation of a SPARQL endpoint using Tornado web framework, allowing complex data querying.
+- **UV Sensor Data Processing:** The 'main.py', running on the ESP32, periodically reads UV sensor data and sends it to the WoT server using HTTP requests.
 
 ## Environment Setup
 
@@ -28,19 +34,20 @@ Now you've built an image from the Dockerfile. Next, check the IMAGE ID:
 docker images
 ```
 
-<!--- current image id for FN: 139996ce06b6 --->
-Copy the characters in the IMAGE ID column and replace 'IMAGE_ID' in the following command:
+Copy the characters in the IMAGE ID column and replace 'IMAGE_ID' and 'USER'  in the following command:
 ```sh
-docker container run --network host -it --rm --user t1k -v $PWD/examples/uv_sensor:/app 'IMAGE_ID' sh
+docker container run --network host -it --rm --user 'USER' -v $PWD/examples/uv_sensor:/app 'IMAGE_ID' sh
 ```
 
-We are now running a Docker container using the specified image with the host network stack, which provides interactive access to a shell session, and mounting the current working directory to the /asdf directory inside the container.
+We are now running a Docker container using the specified image with the host network stack, which provides interactive access to a shell session, and mounting the current working directory to the /app directory inside the container.
 
 Finally, access the server.py file, and we have the server running:
 ```sh
 cd examples/uv_sensor
 python server.py
 ```
+
+This initiates the WoT server with RDF graph integration and starts the SPARQL endpoint on a specified port.
 
 ### ESP32
 
@@ -50,39 +57,58 @@ For detailed information, see this [document](https://t16k-ach2157.readthedocs.i
 
 ### server.py
 
-- Importing the necessary libraries and modules:
+1. Import Statements
+
+The script imports necessary libraries and modules. 'json' for JSON parsing, 'logging' for logging messages, and 'tornado' modules for web server functionalities. The 'wotpy' modules are used for setting up the WoT server, and 'rdflib' modules for RDF graph operations.
 ```py
 import json
 import logging
-import tornado.gen
+import tornado.web
 from tornado.ioloop import IOLoop
+from tornado.web import RequestHandler, Application
 from wotpy.protocols.http.server import HTTPServer
 from wotpy.wot.servient import Servient
-```
+from rdflib import Graph, Namespace, Literal
+from rdflib.namespace import RDF, RDFS, XSD
+from rdflib.plugins.stores import berkeleydb
+from datetime import datetime```
 
-- Defining constants:
+2. Global Variables:
 ```py
 HTTP_PORT = 9494
+SPARQL_PORT = 8585
 ID_THING = "urn:esp32"
 UV_SENSOR = "uv"
-```
-The HTTP_PORT constant specifies the port on which the server will listen. ID_THING represents the identifier for the Thing, and UV_SENSOR is the name of the property representing the UV sensor.
 
-- Global data storage:
-```py
 uv_data = None
 ```
-This variable will store the latest UV sensor data received from the ESP32.
 
-- Setting up [logging](https://docs.python.org/3/library/logging.html):
+- 'HTTP_PORT' and 'SPARQL_PORT' define the ports for the HTTP and SPARQL servers, respectively.
+- 'ID_THING' and 'UV_SENSOR' are identifiers for the WoT Thing and the UV sensor property.
+- 'uv_data' is initialized to store the UV sensor data.
+
+3. Setting up [logging](https://docs.python.org/3/library/logging.html):
 ```py
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 ```
-Configuring the logger to display log messages with the level set to INFO.
+Basic logging is configured, and the logger's level is set to 'INFO'.
 
-- [Thing Description](https://www.w3.org/TR/wot-thing-description/):
+4. RDF Graph Store Initialization
+```py
+config = "berkeley_db"
+store = berkeleydb.BerkeleyDB(configuration=config)
+g = Graph(store=store, identifier=ID_THING)
+g.open(config, create=True)
+```
+
+- 'config' sets the configuration for the BerkeleyDB store.
+- 'store' initializes the BerkeleyDB store.
+- 'g' creates an RDF graph with BerkeleyDB as the store and the Thing ID as the identifier.
+- Namespaces 'ssn', 'sosa', and 'ex' are defined for use in the graph.
+
+5. [WoT Thing Description](https://www.w3.org/TR/wot-thing-description/):
 ```py
 description = {
     "id": ID_THING,
@@ -96,62 +122,105 @@ description = {
     }
 }
 ```
-This dictionary represents the Thing description. It specifies the Thing's ID, name, and properties. In this case, it defines the UV_SENSOR property as a number type that can be read and observed.
 
-- Custom handlers for reading and writing UV data:
+This dictionary represents the Thing description. It specifies the Thing's ID, name, and properties. In this case, it defines the 'UV_SENSOR' property as a number type that can be read and observed.
+
+6. SPARQL Endpoint Handlers:
+```py
+class SPARQLHandler(tornado.web.RequestHandler):
+    def post(self):
+        sparql_query = self.request.body.decode()
+        results = g.query(sparql_query)
+        self.write(results.serialize(format="json"))
+
+class SparqlQueryHandler(RequestHandler):
+    def get(self):
+        self.render("sparql_query.html", results=None)
+
+    def post(self):
+        sparql_query = self.get_body_argument("sparql_query")
+        results = g.query(sparql_query)
+        self.render("sparql_query.html", results=results.serialize(format="json"))
+```
+
+- 'SPARQLHandler': Handles direct SPARQL query requests via POST method, executing queries on the RDF graph and returning results in JSON format.
+- 'SparqlQueryHandler': Manages the web interface for SPARQL queries, allowing users to input queries via a form and view results on a web page.
+
+7. SPARQL Server Initialization:
+```py
+class SPARQLServer(Application):
+    def __init__(self):
+        handlers = [
+            ("/sparql", SPARQLHandler),
+            ("/query", SparqlQueryHandler)
+        ]
+        super(SPARQLServer, self).__init__(handlers)
+```
+
+A Tornado web application configured with URL routes to handle SPARQL queries through the defined handlers. It routes '/sparql' for direct queries and '/query' for the web interface.
+
+8. Custom HTTP WoT Server
+```py
+class CustomHTTPServer(HTTPServer):
+    def __init__(self, *args, **kwargs):
+        super(CustomHTTPServer, self).__init__(*args, **kwargs)
+```
+Extends WotPy's 'HTTPServer' class to set up a custom HTTP server for the WoT (Web of Things) functionalities, enabling the exposure of IoT devices as WoT "Things."
+
+9. UV Data Reading/Writing Functions
 ```py
 @tornado.gen.coroutine
 def read_uv():
-    if uv_data is None:
-        return
-    uv_data_dict = json.loads(uv_data.decode("utf-8"))
-    return float(uv_data_dict['uv'])
+    logger.info("Lendo dados UV.")
+    uv_data_bytes = uv_data
+    if uv_data_bytes:
+        uv_data_dict = json.loads(uv_data_bytes.decode("utf-8"))
+        return float(uv_data_dict['uv'])
 
 @tornado.gen.coroutine
 def write_uv(value):
     global uv_data
+    global g
+    logger.info("Gravando dados UV.")
     uv_data = value
+
+    uv_data_dict = json.loads(uv_data.decode("utf-8"))
+
+    observation_id = "Observation" + datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    observation_uri = ex[observation_id]
+
+    g.add((UVSensor, Observes, UVObservation))
+    g.add((observation_uri, RDF.type, Observation))
+    g.add((observation_uri, HasResult, Literal(uv_data_dict['uv'], datatype=UVValue)))
+    g.add((observation_uri, ResultTime, Literal(datetime.utcnow().isoformat(), datatype=XSD.dateTime)))
+
+    print(g.serialize(format="turtle"))
 ```
-These two functions serve as custom handlers for reading and writing the UV sensor data. The read_uv function parses the stored UV data and returns it as a float. The write_uv function updates the uv_data variable with the received value.
+These coroutine functions are designed for asynchronous reading and writing of UV sensor data. 'write_uv' also updates the RDF graph with new sensor observations.
 
-`tornado.gen.coroutine`: This decorator is used to define a coroutine function in Tornado. It allows the function to be used with asynchronous programming. You can refer to the [Tornado documentation](https://www.tornadoweb.org/en/stable/gen.html) for more details.
-
-`json.loads`: This method is used to parse a JSON string into a Python object. It is part of the Python JSON module. You can refer to the [Python JSON documentation](https://docs.python.org/3/library/json.html) for more details.
-
-`uv_data.decode`: This method is used to decode a byte string into a Unicode string. It is a method of the bytes class in Python. You can refer to the [Python bytes documentation](https://docs.python.org/3/library/stdtypes.html#bytes.decode) for more details.
-
-- Starting the server:
+10. Server Start Functions
 ```py
 @tornado.gen.coroutine
 def start_server():
-    http_server = HTTPServer(port=HTTP_PORT)
+    logger.info("Criando servidor HTTP customizado na porta: {}".format(HTTP_PORT))
+    http_server = CustomHTTPServer(port=HTTP_PORT)
     servient = Servient()
     servient.add_server(http_server)
+    logger.info("Iniciando servient")
     wot = yield servient.start()
+    logger.info("Expondo e configurando Thing")
     exposed_thing = wot.produce(json.dumps(description))
     exposed_thing.set_property_read_handler(UV_SENSOR, read_uv)
     exposed_thing.set_property_write_handler(UV_SENSOR, write_uv)
     exposed_thing.expose()
 
-if __name__ == "__main__":
-    IOLoop.current().add_callback(start_server)
-    IOLoop.current().start()
+def start_sparql_server():
+    logger.info(f"Iniciando servidor SPARQL na porta: {SPARQL_PORT}")
+    sparql_app = SPARQLServer()
+    sparql_app.listen(SPARQL_PORT)
 ```
-The start_server function creates an [HTTP server](https://agmangas.github.io/wot-py/http.html) using the specified port and initializes the [WotPy Servient](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.servient.html?highlight=servient#module-wotpy.wot.servient). It then starts the servient, produces the Thing based on the description, sets the custom read and write handlers for the UV property, and exposes the Thing. Finally, the server is started by adding the start_server function to the IOLoop.
-
-`servient.add_server`: This method is used to add a server to the Servient instance. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.servient.html?highlight=servient%20add_server#wotpy.wot.servient.Servient.add_server) for more details.
-
-`servient.start`: This method is used to start the Servient instance. It returns a future that resolves to a Wot object. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.servient.html?highlight=servient%20start#wotpy.wot.servient.Servient.start) for more details.
-
-`wot.produce`: This method is used to produce a Thing instance from a Thing description. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/wotpy.wot.wot.html?highlight=wot%20produce#wotpy.wot.wot.WoT.produce) for more details.
-
-`json.dumps`: This method is used to serialize a Python object into a JSON-formatted string. It is part of the Python JSON module. You can refer to the [Python JSON documentation](https://docs.python.org/3/library/json.html) for more details.
-
-`exposed_thing.set_property_read_handler`: This method is used to set a custom read handler for a property of a Thing. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=set_property_write_handler#wotpy.wot.exposed.thing.ExposedThing.set_property_write_handler) for more details.
-
-`exposed_thing.set_property_write_handler`: This method is used to set a custom write handler for a property of a Thing. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=set_property_write_handler#wotpy.wot.exposed.thing.ExposedThing.set_property_read_handler) for more details.
-
-`exposed_thing.expose`: This method is used to expose a Thing. It makes the Thing available for interaction through the WoT interfaces. It is part of the WotPy library. You can refer to the [WotPy documentation](https://agmangas.github.io/wot-py/_autosummary/_wot/_exposed/wotpy.wot.exposed.thing.html?highlight=expose#wotpy.wot.exposed.thing.ExposedThing.expose) for more details.
+- 'start_server': Initializes the WoT server with the custom HTTP server.
+- 'start_sparql_server': Starts the SPARQL server for processing RDF graph queries.
 
 ### main.py
 
@@ -257,9 +326,11 @@ One can send data (simulate am ESP32-based device sending data) with cURL comman
 
 ## Example (SPARQL side)
 
-Link to SPARQL query page: http://localhost:8585/query
+Access the SPARQL query page at http://localhost:8585/query to perform complex queries on the RDF graph containing UV sensor data.
 
-Link to SPARQL service:
+Example SPARQL Query:
+```
+SELECT * WHERE {?s ?p ?o}
+```
 
-A SPARQL query: `SELECT * WHERE {?S ?P ?O}`
-
+This query retrieves all triples in the RDF graph.

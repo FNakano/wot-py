@@ -12,9 +12,9 @@ Feel free to customize and expand upon this project to suit your specific requir
 
 ## Key Components
 
-- **WoTPy Server with RDF Graph Integration:** The 'server.py' sets up the WoT server and integrates RDF graphs using RDFLib and BerkeleyDB for storing data.
+- **WoTPy Server with RDF Graph Integration:** The `server.py` sets up the WoT server and integrates RDF graphs using RDFLib and BerkeleyDB for storing data.
 - **SPARQL Endpoint for Advanced Data Querying:** Implementation of a SPARQL endpoint using Tornado web framework, allowing complex data querying.
-- **UV Sensor Data Processing:** The 'main.py', running on the ESP32, periodically reads UV sensor data and sends it to the WoT server using HTTP requests.
+- **UV Sensor Data Processing:** The `main.py`, running on the ESP32, periodically reads UV sensor data and sends it to the WoT server using HTTP requests.
 
 ## Environment Setup
 
@@ -34,7 +34,7 @@ Now you've built an image from the Dockerfile. Next, check the IMAGE ID:
 docker images
 ```
 
-Copy the characters in the IMAGE ID column and replace 'IMAGE_ID' and 'USER'  in the following command:
+Copy the characters in the IMAGE ID column and replace `IMAGE_ID` and `USER`  in the following command:
 ```sh
 docker container run --network host -it --rm --user 'USER' -v $PWD/examples/uv_sensor:/app 'IMAGE_ID' sh
 ```
@@ -59,7 +59,7 @@ For detailed information, see this [document](https://t16k-ach2157.readthedocs.i
 
 1. Import Statements
 
-The script imports necessary libraries and modules. 'json' for JSON parsing, 'logging' for logging messages, and 'tornado' modules for web server functionalities. The 'wotpy' modules are used for setting up the WoT server, and 'rdflib' modules for RDF graph operations.
+The script imports necessary libraries and modules. `json` for JSON parsing, `logging` for logging messages, and `tornado` modules for web server functionalities. The `wotpy` modules are used for setting up the WoT server, and `rdflib` modules for RDF graph operations.
 ```py
 import json
 import logging
@@ -72,6 +72,7 @@ from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import RDF, RDFS, XSD
 from rdflib.plugins.stores import berkeleydb
 from datetime import datetime```
+```
 
 2. Global Variables:
 ```py
@@ -83,9 +84,9 @@ UV_SENSOR = "uv"
 uv_data = None
 ```
 
-- 'HTTP_PORT' and 'SPARQL_PORT' define the ports for the HTTP and SPARQL servers, respectively.
-- 'ID_THING' and 'UV_SENSOR' are identifiers for the WoT Thing and the UV sensor property.
-- 'uv_data' is initialized to store the UV sensor data.
+- `HTTP_PORT` and `SPARQL_PORT` define the ports for the HTTP and SPARQL servers, respectively.
+- `ID_THING` and `UV_SENSOR` are identifiers for the WoT Thing and the UV sensor property.
+- `uv_data` is initialized to store the UV sensor data.
 
 3. Setting up [logging](https://docs.python.org/3/library/logging.html):
 ```py
@@ -93,7 +94,7 @@ logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 ```
-Basic logging is configured, and the logger's level is set to 'INFO'.
+Basic logging is configured, and the logger's level is set to `INFO`.
 
 4. RDF Graph Store Initialization
 ```py
@@ -103,10 +104,10 @@ g = Graph(store=store, identifier=ID_THING)
 g.open(config, create=True)
 ```
 
-- 'config' sets the configuration for the BerkeleyDB store.
-- 'store' initializes the BerkeleyDB store.
-- 'g' creates an RDF graph with BerkeleyDB as the store and the Thing ID as the identifier.
-- Namespaces 'ssn', 'sosa', and 'ex' are defined for use in the graph.
+- `config` sets the configuration for the BerkeleyDB store.
+- `store` initializes the BerkeleyDB store.
+- `g` creates an RDF graph with BerkeleyDB as the store and the Thing ID as the identifier.
+- Namespaces `ssn`, `sosa`, and `ex` are defined for use in the graph.
 
 5. [WoT Thing Description](https://www.w3.org/TR/wot-thing-description/):
 ```py
@@ -123,7 +124,7 @@ description = {
 }
 ```
 
-This dictionary represents the Thing description. It specifies the Thing's ID, name, and properties. In this case, it defines the 'UV_SENSOR' property as a number type that can be read and observed.
+This dictionary represents the Thing description. It specifies the Thing's ID, name, and properties. In this case, it defines the `UV_SENSOR` property as a number type that can be read and observed.
 
 6. SPARQL Endpoint Handlers:
 ```py
@@ -143,8 +144,8 @@ class SparqlQueryHandler(RequestHandler):
         self.render("sparql_query.html", results=results.serialize(format="json"))
 ```
 
-- 'SPARQLHandler': Handles direct SPARQL query requests via POST method, executing queries on the RDF graph and returning results in JSON format.
-- 'SparqlQueryHandler': Manages the web interface for SPARQL queries, allowing users to input queries via a form and view results on a web page.
+- `SPARQLHandler`: Handles direct SPARQL query requests via POST method, executing queries on the RDF graph and returning results in JSON format.
+- `SparqlQueryHandler`: Manages the web interface for SPARQL queries, allowing users to input queries via a form and view results on a web page.
 
 7. SPARQL Server Initialization:
 ```py
@@ -157,7 +158,7 @@ class SPARQLServer(Application):
         super(SPARQLServer, self).__init__(handlers)
 ```
 
-A Tornado web application configured with URL routes to handle SPARQL queries through the defined handlers. It routes '/sparql' for direct queries and '/query' for the web interface.
+A Tornado web application configured with URL routes to handle SPARQL queries through the defined handlers. It routes `/sparql` for direct queries and `/query` for the web interface.
 
 8. Custom HTTP WoT Server
 ```py
@@ -165,7 +166,7 @@ class CustomHTTPServer(HTTPServer):
     def __init__(self, *args, **kwargs):
         super(CustomHTTPServer, self).__init__(*args, **kwargs)
 ```
-Extends WotPy's 'HTTPServer' class to set up a custom HTTP server for the WoT (Web of Things) functionalities, enabling the exposure of IoT devices as WoT "Things."
+Extends WotPy's `HTTPServer` class to set up a custom HTTP server for the WoT (Web of Things) functionalities, enabling the exposure of IoT devices as WoT "Things."
 
 9. UV Data Reading/Writing Functions
 ```py
@@ -196,7 +197,7 @@ def write_uv(value):
 
     print(g.serialize(format="turtle"))
 ```
-These coroutine functions are designed for asynchronous reading and writing of UV sensor data. 'write_uv' also updates the RDF graph with new sensor observations.
+These coroutine functions are designed for asynchronous reading and writing of UV sensor data. `write_uv` also updates the RDF graph with new sensor observations.
 
 10. Server Start Functions
 ```py
@@ -219,8 +220,8 @@ def start_sparql_server():
     sparql_app = SPARQLServer()
     sparql_app.listen(SPARQL_PORT)
 ```
-- 'start_server': Initializes the WoT server with the custom HTTP server.
-- 'start_sparql_server': Starts the SPARQL server for processing RDF graph queries.
+- `start_server`: Initializes the WoT server with the custom HTTP server.
+- `start_sparql_server`: Starts the SPARQL server for processing RDF graph queries.
 
 ### main.py
 

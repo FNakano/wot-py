@@ -36,7 +36,7 @@ docker images
 
 Copy the characters in the IMAGE ID column and replace `IMAGE_ID` and `USER`  in the following command:
 ```sh
-docker container run --network host -it --rm --user 'USER' -v $PWD/examples/uv_sensor:/app 'IMAGE_ID' sh
+docker container run --network host -it --rm --user 1000:1000 -v $PWD/examples/uv_sensor:/app 'IMAGE_ID' sh
 ```
 
 We are now running a Docker container using the specified image with the host network stack, which provides interactive access to a shell session, and mounting the current working directory to the /app directory inside the container.

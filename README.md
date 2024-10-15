@@ -1,3 +1,7 @@
+**note:**: Synchronizing this fork with original wot-py would break this application. Original wot-py author (agmangas) decided to remove tornado coroutines (I believe he removed Tornado from wot-py). uv_sensor example is still working (2024-10-14). [Details](./2024-10-14.md)
+
+
+
 **note**: This fork aims to *use* WoTPy to implement a servient, a knowledge graph persitence mechanism and a SPARQL endpoint. These features are developed and tested in the uv_sensor example [here](examples/uv_sensor)
 
 Here follow the original WoTPy README: 

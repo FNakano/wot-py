@@ -24,7 +24,7 @@ Component list:
 | aaa | bbb | ccc |
 | --- | --- | --- |
 | 1 | ESP32S dev kit | --- |
-| 1 | 1k$\Omega$ resistor  | name one lead as A, other as B |
+| 1 | $1k\Omega$ resistor  | name one lead as A, other as B |
 | 1 | LDR  | name one lead as A, other as B |
 | 1 | OLED display  | for future use. Information on how to use it in https://github.com/FNakano/CFA/tree/master/projetos/py-OLED |
 
